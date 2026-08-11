@@ -3,4 +3,5 @@ defaults:
   - dataset: default
   - step: default
   - trainer: default
+  - early_stopping: default
   - _self_

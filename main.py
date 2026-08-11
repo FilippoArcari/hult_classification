@@ -40,10 +40,12 @@ def my_app(cfg: DictConfig) -> None:
                     f"derivato dai dati ({num_classes}). Uso quello derivato."
                 )
             cfg.classifier.num_classes = num_classes
-        early_stopping_callback = L.callbacks.EarlyStopping(
-            monitor="val_loss",
-            patience=cfg.trainer.early_stopping_patience,
-            mode="min",
+        early_stopping_callback = EarlyStopping(
+            monitor=cfg.early_stopping.monitor,
+            patience=cfg.early_stopping.patience,
+            min_delta=cfg.early_stopping.min_delta,
+            mode=cfg.early_stopping.mode,
+            verbose=True,
         )
 
         model = Classificator(**cfg.classifier)
