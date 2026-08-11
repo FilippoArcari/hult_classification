@@ -1,0 +1,11 @@
+classifier:
+  lr: 0.001
+  weight_decai: 1.0e-05
+dataset:
+  path_to_folder: MILK10k_Training_Input
+  path_to_csv: MILK10k_Training_GroundTruth.csv
+  batch_size: 32
+  num_workers: 4
+step:
+  name: train
+trainer: {}

@@ -1,0 +1,6 @@
+defaults:
+  - classifier: default
+  - dataset: default
+  - step: default
+  - trainer: default
+  - _self_

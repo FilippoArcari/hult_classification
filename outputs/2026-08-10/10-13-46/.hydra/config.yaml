@@ -1,0 +1,6 @@
+classifier: {}
+dataset:
+  path_to_folder: MILK10k_Training_Input
+  path_to_csv: MILK10k_Training_GroundTruth.csv
+step:
+  name: train
