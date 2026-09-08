@@ -1,0 +1,13 @@
+.venv
+.venv/
+.git
+lightning_logs/
+outputs/
+*.ckpt
+*.zip
+__pycache__/
+.python-version
+
+# Escludi i dati pesanti dal dataset del codice
+MILK10k_Training_Input/
+MILK10k_Training_GroundTruth.csv

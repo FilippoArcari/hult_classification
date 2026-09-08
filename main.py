@@ -1,3 +1,5 @@
+import json
+
 import hydra
 from omegaconf import DictConfig, OmegaConf, open_dict
 import lightning as L
@@ -18,6 +20,10 @@ def my_app(cfg: DictConfig) -> None:
         num_workers=cfg.dataset.num_workers,
     )
     milk10kDataModule.setup()
+    class_names = milk10kDataModule.get_col_names()
+
+    with open("class_names.json", "w") as f:
+        json.dump(class_names, f)
 
     train_dataset = milk10kDataModule.train_dataset
     print(f"shape of train dataset: {train_dataset[0][0].shape}")
@@ -27,7 +33,7 @@ def my_app(cfg: DictConfig) -> None:
 
     # Deriva num_classes dai dati reali invece di assumerlo in config.
     num_classes = milk10kDataModule.num_classes
-    print(f"Numero di classi rilevate: {num_classes}")
+
 
     if cfg.step.name == "train":
         # cfg.classifier è in modalità struct (Hydra la imposta di default),
@@ -61,6 +67,10 @@ def my_app(cfg: DictConfig) -> None:
         model = Classificator.load_from_checkpoint("model.ckpt")
         trainer = L.Trainer(**cfg.trainer)
         trainer.test(model, milk10kDataModule)
+    if cfg.step.name == "page":
+        model = Classificator.load_from_checkpoint("model.ckpt")
+        trainer = L.Trainer(**cfg.trainer)
+        trainer.predict(model, milk10kDataModule)
 
 
 if __name__ == "__main__":

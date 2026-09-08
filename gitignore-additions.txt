@@ -1,0 +1,12 @@
+# --- serving ---
+serving/checkpoints/
+
+# --- frontend (Next.js) ---
+frontend/node_modules/
+frontend/.next/
+frontend/.env*.local
+
+# --- python env, se non già presente ---
+.venv/
+__pycache__/
+*.pyc

@@ -1,9 +1,0 @@
-lr: 0.001
-weight_decay: 1.0e-05
-num_classes: 11
-path_to_dir: MILK10k_Training_Input
-path_to_ground_truth: MILK10k_Training_GroundTruth.csv
-batch_size: 32
-num_workers: 4
-val_frac: 0.2
-seed: 42
