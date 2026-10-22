@@ -4,4 +4,5 @@ python-multipart
 torch
 torchvision
 pillow
-pytorch-lightning
+lightning
+torchmetrics>=1.9,<2

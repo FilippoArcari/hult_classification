@@ -12,3 +12,6 @@ wheels/
 outputs/
 lightning_logs/
 *.ckpt
+.kaggle_staging/
+.pytest_cache/
+class_names.json

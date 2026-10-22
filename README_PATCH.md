@@ -1,5 +1,9 @@
 # Come applicare questa patch
 
+> Istruzioni storiche della prima integrazione UI. Per l'avvio attuale con
+> `uv run main.py step=page`, smoke test, TensorBoard e Kaggle usare [README.md](README.md).
+> L'import placeholder e il preprocessing del serving sono stati sostituiti.
+
 Struttura contenuta in questo archivio:
 
 ```

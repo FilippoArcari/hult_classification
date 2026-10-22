@@ -1,12 +1,13 @@
 import os
 import lightning as L
 import pandas as pd
+import torch
 from PIL import Image
 from torch.utils.data import Dataset, DataLoader, Subset
 from torchvision import transforms
-from sklearn.model_selection import GroupShuffleSplit
 from sklearn.model_selection import StratifiedGroupKFold
 import numpy as np  
+from mole_classificator.preprocessing import ImagePreprocessor, pad_image_batch
 
 
 
@@ -33,7 +34,8 @@ class Milk10kDataset(Dataset):
     def __getitem__(self, idx):
         path = self.image_paths[idx]
         lesion_id = self._lesion_id(path)
-        image = self.transform(Image.open(path).convert("RGB"))
+        with Image.open(path) as source:
+            image = self.transform(source)
         label = self.lesion_to_label[lesion_id]
         return image, label
 
@@ -43,7 +45,8 @@ class Milk10kDataset(Dataset):
 
 
 class Milk10kDataModule(L.LightningDataModule):
-    def __init__(self, path_to_dir, path_to_ground_truth, batch_size=32, num_workers=4, val_frac=0.2, seed=42):
+    def __init__(self, path_to_dir, path_to_ground_truth, batch_size=32, num_workers=4, val_frac=0.2, seed=42,
+                 max_image_size=600, normalize=True, train_augmentation=True):
         super().__init__()
         self.save_hyperparameters()
 
@@ -57,11 +60,14 @@ class Milk10kDataModule(L.LightningDataModule):
             for file in files:
                 if file.lower().endswith((".jpg", ".jpeg", ".png")):
                     image_paths.append(os.path.join(root, file))
-        return image_paths
+        return sorted(image_paths)
     def setup(self, stage=None):
         ground_truth = pd.read_csv(self.hparams.path_to_ground_truth)
         image_paths = self._collect_image_paths()
-        self.full_dataset = Milk10kDataset(image_paths, ground_truth)
+        self.full_dataset = Milk10kDataset(
+            image_paths, ground_truth,
+            transform=ImagePreprocessor(self.hparams.max_image_size, self.hparams.normalize),
+        )
         groups = self.full_dataset.groups()
         labels = self.full_dataset.labels  # array di indici di classe, uno per immagine
 
@@ -79,7 +85,12 @@ class Milk10kDataModule(L.LightningDataModule):
         val_idx = trainval_idx[val_rel_idx]
 
         if stage in (None, "fit"):
-            self.train_dataset = Subset(self.full_dataset, train_idx)
+            train_dataset = Milk10kDataset(
+                image_paths, ground_truth,
+                transform=ImagePreprocessor(self.hparams.max_image_size, self.hparams.normalize,
+                                            augment=self.hparams.train_augmentation),
+            )
+            self.train_dataset = Subset(train_dataset, train_idx)
             self.val_dataset = Subset(self.full_dataset, val_idx)
         if stage in (None, "test"):
             self.test_dataset = Subset(self.full_dataset, test_idx)
@@ -88,17 +99,34 @@ class Milk10kDataModule(L.LightningDataModule):
     def get_col_names(self):
         return self.train_dataset.dataset.class_names
 
+    def get_class_weights(self, beta=0.999):
+        """Effective-number weights from training metadata, normalized to mean one."""
+        if not 0 <= beta < 1:
+            raise ValueError("class_balance_beta deve soddisfare 0 <= beta < 1")
+        if not hasattr(self, "train_dataset"):
+            raise RuntimeError("get_class_weights richiede setup('fit') prima del calcolo")
+        class_names = self.train_dataset.dataset.class_names
+        counts = np.bincount(self._extract_labels(self.train_dataset), minlength=len(class_names))
+        missing = [name for name, count in zip(class_names, counts) if count == 0]
+        if missing:
+            raise ValueError(f"Classi assenti dal training: {missing}")
+        weights = (1 - beta) / (1 - np.power(beta, counts))
+        return torch.as_tensor(weights / weights.mean(), dtype=torch.float32)
+
     def train_dataloader(self):
         return DataLoader(self.train_dataset, batch_size=self.hparams.batch_size,
-                           shuffle=True, num_workers=self.hparams.num_workers, pin_memory=True)
+                           shuffle=True, num_workers=self.hparams.num_workers, pin_memory=True,
+                           collate_fn=pad_image_batch)
 
     def val_dataloader(self):
         return DataLoader(self.val_dataset, batch_size=self.hparams.batch_size,
-                           shuffle=False, num_workers=self.hparams.num_workers, pin_memory=True)
+                           shuffle=False, num_workers=self.hparams.num_workers, pin_memory=True,
+                           collate_fn=pad_image_batch)
 
     def test_dataloader(self):
         return DataLoader(self.test_dataset, batch_size=self.hparams.batch_size,
-                           shuffle=False, num_workers=self.hparams.num_workers, pin_memory=True)
+                           shuffle=False, num_workers=self.hparams.num_workers, pin_memory=True,
+                           collate_fn=pad_image_batch)
     @property
     def num_classes(self) -> int:
         if not hasattr(self, "train_dataset") or self.train_dataset is None:
@@ -109,8 +137,6 @@ class Milk10kDataModule(L.LightningDataModule):
         train_labels = set(self._extract_labels(self.train_dataset))
         val_labels = set(self._extract_labels(self.val_dataset))
         test_labels = set(self._extract_labels(self.test_dataset))
-
-        all_labels = train_labels | val_labels | test_labels
 
         # Verifica esplicita: se val/test contengono classi assenti dal
         # training, il modello non potrà mai predirle correttamente, e
@@ -127,10 +153,8 @@ class Milk10kDataModule(L.LightningDataModule):
                 f"{test_labels - train_labels}"
             )
 
-        return len(all_labels)
+        return len(self.full_dataset.class_names)
 
     def _extract_labels(self, dataset) -> list[int]:
-        # Adatta questo metodo alla struttura reale del tuo Dataset.
-        # Esempio se il Dataset espone un dataframe con colonna encoded:
-        # return dataset.dataframe["diagnosis_encoded"].tolist()
-        return [dataset[i][1] for i in range(len(dataset))]
+        # Inspect labels without decoding every image in the dataset.
+        return dataset.dataset.labels[dataset.indices].tolist()

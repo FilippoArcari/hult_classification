@@ -5,3 +5,16 @@ defaults:
   - trainer: default
   - early_stopping: default
   - _self_
+
+logging:
+  log_graph: false
+
+page:
+  checkpoint: model.ckpt
+  class_names: class_names.json
+  port: 3000
+  open_browser: true
+
+kaggle:
+  dry_run: false
+  output_dir: .kaggle_staging

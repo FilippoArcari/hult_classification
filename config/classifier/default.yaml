@@ -1,2 +1,13 @@
-lr: 1e-3
-weight_decay: 1e-5
+lr: 3e-4
+weight_decay: 1e-4
+pretrained: true
+normalize: true
+max_image_size: 600
+diagnostics_every_n_steps: 100
+d_model: 256
+nhead: 8
+num_layers: 2
+num_tokens: 252
+pos_grid_size: [14, 18]
+freeze_backbone_epochs: 3
+backbone_lr_mult: 0.1

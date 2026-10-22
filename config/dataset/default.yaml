@@ -2,3 +2,8 @@ path_to_folder: MILK10k_Training_Input
 path_to_csv: MILK10k_Training_GroundTruth.csv
 batch_size: 32
 num_workers: 4
+seed: 42
+train_augmentation: true
+# Pesi (1-beta)/(1-beta**n), calcolati solo sul training e normalizzati a media 1.
+# beta=0 assegna peso uniforme; valori vicini a 1 favoriscono le classi rare.
+class_balance_beta: 0.999
